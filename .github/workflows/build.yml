@@ -24,6 +24,12 @@ jobs:
       - name: Restore JARVIS source
         run: git checkout -- lib/main.dart pubspec.yaml assets/jarvis_avatar.png
 
+      - name: Add Voice Packages
+        run: flutter pub add speech_to_text flutter_tts
+
+      - name: Add Microphone Permission
+        run: sed -i '/<manifest /a\    <uses-permission android:name="android.permission.RECORD_AUDIO"/>' android/app/src/main/AndroidManifest.xml
+
       - name: Build APK
         run: flutter build apk --release
 
