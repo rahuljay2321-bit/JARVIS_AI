@@ -21,6 +21,9 @@ jobs:
       - name: Create Flutter project
         run: flutter create --project-name jarvis_ai --org com.jarvisai .
 
+      - name: Restore JARVIS source
+        run: git checkout -- lib/main.dart
+
       - name: Build APK
         run: flutter build apk --release
 
