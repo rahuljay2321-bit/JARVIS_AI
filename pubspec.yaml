@@ -18,6 +18,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/jarvis_avatar.png0
+    - assets/jarvis_avatar.png
 
 
