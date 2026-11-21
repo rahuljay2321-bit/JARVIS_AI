@@ -1,5 +1,6 @@
-
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 void main() {
   runApp(const JarvisApp());
@@ -30,18 +31,106 @@ class _JarvisHomeState extends State<JarvisHome>
     with SingleTickerProviderStateMixin {
   late AnimationController controller;
 
+  final SpeechToText speech = SpeechToText();
+  final FlutterTts tts = FlutterTts();
+
+  bool listening = false;
+  bool available = false;
+
+  String message = 'I am always ready to help you.';
+  String recognizedText = '';
+
   @override
   void initState() {
     super.initState();
+
     controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+
+    initializeVoice();
+  }
+
+  Future<void> initializeVoice() async {
+    available = await speech.initialize();
+
+    await tts.setLanguage('hi-IN');
+    await tts.setPitch(1.0);
+    await tts.setSpeechRate(0.45);
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> startListening() async {
+    if (!available) {
+      await initializeVoice();
+    }
+
+    if (!available) {
+      setState(() {
+        message = 'Speech recognition unavailable';
+      });
+      return;
+    }
+
+    await tts.stop();
+
+    setState(() {
+      listening = true;
+      message = 'Listening...';
+      recognizedText = '';
+    });
+
+    await speech.listen(
+      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 3),
+      onResult: (result) {
+        setState(() {
+          recognizedText = result.recognizedWords;
+        });
+
+        if (result.finalResult) {
+          respondToUser(result.recognizedWords);
+        }
+      },
+    );
+  }
+
+  Future<void> respondToUser(String text) async {
+    await speech.stop();
+
+    if (!mounted) return;
+
+    setState(() {
+      listening = false;
+      message = text.isEmpty ? 'I could not hear you.' : 'You said:';
+    });
+
+    if (text.isNotEmpty) {
+      await tts.speak('आपने कहा $text');
+    }
+  }
+
+  Future<void> toggleListening() async {
+    if (listening) {
+      await speech.stop();
+      setState(() {
+        listening = false;
+        message = 'Voice stopped';
+      });
+    } else {
+      await startListening();
+    }
   }
 
   @override
   void dispose() {
     controller.dispose();
+    speech.stop();
+    tts.stop();
     super.dispose();
   }
 
@@ -139,27 +228,66 @@ class _JarvisHomeState extends State<JarvisHome>
 
             const SizedBox(height: 10),
 
-            const Text(
-              'I am always ready to help you.',
-              style: TextStyle(
-                color: Colors.white60,
-                fontSize: 14,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 14,
+                ),
               ),
             ),
 
+            if (recognizedText.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  recognizedText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.cyanAccent,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+
             const Spacer(),
 
-            const Icon(
-              Icons.mic,
-              color: Colors.cyanAccent,
-              size: 35,
+            GestureDetector(
+              onTap: toggleListening,
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: listening
+                      ? Colors.cyanAccent.withOpacity(0.2)
+                      : const Color(0xFF07182B),
+                  border: Border.all(
+                    color: Colors.cyanAccent,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyanAccent.withOpacity(0.3),
+                      blurRadius: 20,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  listening ? Icons.mic : Icons.mic_none,
+                  color: Colors.cyanAccent,
+                  size: 35,
+                ),
+              ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-            const Text(
-              'HEY JARVIS',
-              style: TextStyle(
+            Text(
+              listening ? 'LISTENING...' : 'HEY JARVIS',
+              style: const TextStyle(
                 color: Colors.cyanAccent,
                 fontSize: 17,
                 letterSpacing: 5,
@@ -170,7 +298,7 @@ class _JarvisHomeState extends State<JarvisHome>
             const SizedBox(height: 8),
 
             const Text(
-              'VOICE SYSTEM COMING SOON',
+              'TAP MICROPHONE TO SPEAK',
               style: TextStyle(
                 color: Colors.white38,
                 fontSize: 10,
@@ -184,8 +312,5 @@ class _JarvisHomeState extends State<JarvisHome>
       ),
     );
   }
-}
-
-
-  
+}0
 
